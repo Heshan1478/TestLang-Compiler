@@ -1,0 +1,10 @@
+// Missing semicolon
+config {
+  base_url = "http://localhost:8080";
+}
+
+test MissingSemicolon {
+  GET "/test"
+  expect status = 200;
+  expect body contains "ok";
+}

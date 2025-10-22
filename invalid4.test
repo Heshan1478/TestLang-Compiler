@@ -1,0 +1,12 @@
+//Body not a string - parser will catch
+config {
+  base_url = "http://localhost:8080";
+}
+
+test BodyNotString {
+  POST "/api/test" {
+    body = 123;
+  };
+  expect status = 200;
+  expect body contains "ok";
+}

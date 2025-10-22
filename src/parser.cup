@@ -1,0 +1,265 @@
+/* ===========================================================
+   TestLang++ Parser - CUP 0.11b Compatible (Stack-based)
+   =========================================================== */
+
+import java_cup.runtime.*;
+import java.util.*;
+import ASTmodel.*;
+
+/* ---------- Parser setup ---------- */
+parser code {:
+    // Track if we've had errors
+    private boolean hasError = false;
+
+    // Better syntax error reporting
+    public void syntax_error(Symbol cur_token) {
+        hasError = true;
+        int line = cur_token.left;
+        int column = cur_token.right;
+
+        System.err.println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        System.err.println("SYNTAX ERROR:");
+        System.err.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+        if (line >= 0 && column >= 0) {
+            System.err.println("Location: Line " + line + ", Column " + column);
+        } else {
+            System.err.println("Location: End of file");
+        }
+
+        // Try to give helpful message based on current token
+        String tokenName = symbl_name_from_id(cur_token.sym);
+        System.err.println("Unexpected token: " + tokenName);
+
+        // Common error hints
+        if (tokenName.equals("EXPECT")) {
+            System.err.println("\nHint: Did you forget a semicolon after the previous statement?");
+        } else if (tokenName.equals("RBRACE")) {
+            System.err.println("\nHint: Check if you're missing a semicolon after a request block.");
+        } else if (tokenName.equals("NUMBER") || tokenName.equals("IDENT")) {
+            System.err.println("\nHint: Check if you need quotes around this value.");
+        }
+
+        System.err.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    }
+
+    // Custom error reporting
+    public void report_error(String message, Object info) {
+        System.err.println("Parse error: " + message);
+    }
+
+    // Fatal error handling
+    public void report_fatal_error(String message, Object info) throws Exception {
+        System.err.println("\n✗ FATAL ERROR: " + message);
+        System.err.println("Parser cannot recover. Please fix the errors above and try again.\n");
+        throw new Exception("Fatal parse error");
+    }
+
+    // Helper to get token name
+    // Helper to get token name
+    public String symbl_name_from_id(int id) {
+        try {
+            return sym.terminalNames[id];
+        } catch (Exception e) {
+            return "UNKNOWN";
+        }
+    }
+:};
+
+/* ---------- Terminal declarations ---------- */
+terminal CONFIG, BASE_URL, HEADER;
+terminal LET, TEST;
+terminal GET, POST, PUT, DELETE;
+terminal EXPECT, STATUS, BODY, CONTAINS;
+terminal LBRACE, RBRACE, EQUALS, SEMICOLON;
+terminal String IDENT, STRING;
+terminal Integer NUMBER;
+
+/* ---------- Nonterminal types ---------- */
+non terminal List program;
+non terminal Object program_item;
+non terminal Config config;
+non terminal List config_items;
+non terminal Object config_item;
+non terminal Variable variable;
+non terminal TestCase test;
+non terminal List test_body;
+non terminal Object test_statement;
+non terminal Request request;
+non terminal List request_items;
+non terminal Object request_item;
+non terminal Assertion assertion;
+non terminal String method;
+non terminal Object value;
+
+/* ---------- Start ---------- */
+start with program;
+
+/* ---------- Grammar ---------- */
+
+program ::=
+    program:p program_item:i
+        {:
+           p.add(i);
+           RESULT = p;
+        :}
+  | program_item:i
+        {:
+           List list = new ArrayList();
+           list.add(i);
+           RESULT = list;
+        :}
+  ;
+
+program_item ::=
+      config:c   {: RESULT = c; :}
+    | variable:v {: RESULT = v; :}
+    | test:t     {: RESULT = t; :}
+  ;
+
+config ::=
+    CONFIG LBRACE config_items:items RBRACE
+        {:
+           Config cfg = new Config();
+           for (Object obj : items) {
+               Config.HeaderEntry entry = (Config.HeaderEntry) obj;
+               if (entry.isBaseUrl) {
+                   cfg.setBaseUrl(entry.value);
+               } else {
+                   cfg.addHeader(entry.key, entry.value);
+               }
+           }
+           RESULT = cfg;
+        :}
+  ;
+
+config_items ::=
+    config_item:i config_items:l
+        {:
+           List result = new ArrayList();
+           result.add(i);
+           result.addAll(l);
+           RESULT = result;
+        :}
+  | config_item:i
+        {:
+           List result = new ArrayList();
+           result.add(i);
+           RESULT = result;
+        :}
+  ;
+
+config_item ::=
+    BASE_URL EQUALS STRING:s SEMICOLON
+        {: RESULT = new Config.HeaderEntry(true, null, s); :}
+  | HEADER STRING:k EQUALS STRING:v SEMICOLON
+        {: RESULT = new Config.HeaderEntry(false, k, v); :}
+  ;
+
+variable ::=
+    LET IDENT:n EQUALS value:v SEMICOLON
+        {: RESULT = new Variable(n, v); :}
+  ;
+
+test ::=
+    TEST IDENT:n LBRACE test_body:b RBRACE
+        {:
+           TestCase t = new TestCase(n);
+           for (Object item : b) {
+               if (item instanceof Request) {
+                   t.addRequest((Request)item);
+               } else if (item instanceof Assertion) {
+                   t.addAssertion((Assertion)item);
+               }
+           }
+           RESULT = t;
+        :}
+  ;
+
+test_body ::=
+    test_statement:s test_body:l
+        {:
+           List result = new ArrayList();
+           result.add(s);
+           result.addAll(l);
+           RESULT = result;
+        :}
+  | test_statement:s
+        {:
+           List result = new ArrayList();
+           result.add(s);
+           RESULT = result;
+        :}
+  ;
+
+test_statement ::=
+      request:r   {: RESULT = r; :}
+    | assertion:a {: RESULT = a; :}
+  ;
+
+request ::=
+    method:m STRING:p SEMICOLON
+        {:
+           Request req = new Request(m, p);
+           RESULT = req;
+        :}
+  | method:m STRING:p LBRACE request_items:items RBRACE SEMICOLON
+        {:
+           Request req = new Request(m, p);
+           for (Object obj : items) {
+               Request.HeaderEntry entry = (Request.HeaderEntry) obj;
+               if (entry.isBody) {
+                   req.setBody(entry.value);
+               } else {
+                   req.addHeader(entry.key, entry.value);
+               }
+           }
+           RESULT = req;
+        :}
+  ;
+
+request_items ::=
+    request_item:i request_items:l
+        {:
+           List result = new ArrayList();
+           result.add(i);
+           result.addAll(l);
+           RESULT = result;
+        :}
+  | request_item:i
+        {:
+           List result = new ArrayList();
+           result.add(i);
+           RESULT = result;
+        :}
+  ;
+
+request_item ::=
+    HEADER STRING:k EQUALS STRING:v SEMICOLON
+        {: RESULT = new Request.HeaderEntry(false, k, v); :}
+  | BODY EQUALS STRING:b SEMICOLON
+        {: RESULT = new Request.HeaderEntry(true, null, b); :}
+  ;
+
+method ::=
+      GET    {: RESULT = "GET"; :}
+    | POST   {: RESULT = "POST"; :}
+    | PUT    {: RESULT = "PUT"; :}
+    | DELETE {: RESULT = "DELETE"; :}
+  ;
+
+assertion ::=
+    EXPECT STATUS EQUALS NUMBER:n SEMICOLON
+        {: RESULT = Assertion.statusEquals(n.intValue()); :}
+  | EXPECT HEADER STRING:k EQUALS STRING:v SEMICOLON
+        {: RESULT = Assertion.headerEquals(k, v); :}
+  | EXPECT HEADER STRING:k CONTAINS STRING:v SEMICOLON
+        {: RESULT = Assertion.headerContains(k, v); :}
+  | EXPECT BODY CONTAINS STRING:s SEMICOLON
+        {: RESULT = Assertion.bodyContains(s); :}
+  ;
+
+value ::=
+      STRING:s {: RESULT = s; :}
+    | NUMBER:n {: RESULT = n; :}
+  ;

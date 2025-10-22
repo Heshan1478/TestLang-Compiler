@@ -1,0 +1,12 @@
+//Undefined variable
+config {
+  base_url = "http://localhost:8080";
+}
+
+let user = "admin";
+
+test UndefinedVariable {
+  GET "/api/users/$id";
+  expect status = 200;
+  expect body contains "user";
+}

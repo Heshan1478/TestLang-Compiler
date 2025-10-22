@@ -1,0 +1,9 @@
+//Invalid identifier - will be caught by lexer
+config {
+  base_url = "http://localhost:8080";
+}
+
+test NotEnoughAssertions {
+  GET "/api/test";
+  expect status = 200;
+}
