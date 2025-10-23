@@ -18,5 +18,5 @@ test Login {
 test GetUser {
   GET "/api/users/$id";
   expect status = 200;
-  expect body contains "\"id\": 42";
+  expect body contains "\"id\":42";
 }

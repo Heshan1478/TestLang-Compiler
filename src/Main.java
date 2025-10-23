@@ -121,27 +121,8 @@ public class Main {
                     writer.write(generatedCode);
                     writer.close();
 
-                    System.out.println("✓ Successfully generated: GeneratedTests.java");
-                    System.out.println("✓ Location: " + new File("GeneratedTests.java").getAbsolutePath());
-                    System.out.println("\n" + "═".repeat(39));
-                    System.out.println("NEXT STEPS:");
-                    System.out.println("═".repeat(39));
-                    System.out.println("1. Download JUnit 5 JAR:");
-                    System.out.println("   https://repo1.maven.org/maven2/org/junit/platform/");
-                    System.out.println("   junit-platform-console-standalone/1.9.3/");
-                    System.out.println("   junit-platform-console-standalone-1.9.3.jar");
-                    System.out.println();
-                    System.out.println("2. Compile generated tests:");
-                    System.out.println("   javac -cp junit-platform-console-standalone-1.9.3.jar GeneratedTests.java");
-                    System.out.println();
-                    System.out.println("3. Run tests:");
-                    System.out.println("   java -jar junit-platform-console-standalone-1.9.3.jar \\");
-                    System.out.println("        --class-path . --scan-classpath");
-                    System.out.println();
-                    System.out.println("4. Make sure your backend is running on:");
-                    System.out.println("   " + (config != null && config.getBaseUrl() != null ?
-                            config.getBaseUrl() : "http://localhost:8080"));
-                    System.out.println("═".repeat(39) + "\n");
+                    System.out.println("Parsing completed successfully.");
+                    System.out.println("Generated: src/GeneratedTests.java");
 
                 } catch (IOException e) {
                     System.err.println("✗ Error writing GeneratedTests.java: " + e.getMessage());

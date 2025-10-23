@@ -1,0 +1,124 @@
+/* ========= TestLang++ Parser (Step 3: AST Construction) ========= */
+
+import java_cup.runtime.*;
+import java.util.*;
+import ASTmodel.*;
+
+/* Optional helper code (run quick smoke test) */
+parser code {:
+    public static void main(String[] args) throws Exception {
+        System.out.println("Parser is ready!");
+    }
+:};
+
+/* ---------- typed nonterminals (use %type) ---------- */
+%type java.util.List statements
+%type java.lang.Object statement
+%type ASTmodel.Config config
+%type ASTmodel.Variable variable
+%type ASTmodel.TestCase test
+%type ASTmodel.Request request
+%type ASTmodel.Assertion assertion
+%type java.lang.String method
+%type java.lang.Object value
+
+/* ---------- terminals ---------- */
+terminal CONFIG, BASE_URL, HEADER;
+terminal LET, TEST;
+terminal GET, POST, PUT, DELETE;
+terminal EXPECT, STATUS, BODY, CONTAINS;
+terminal LBRACE, RBRACE, EQUALS, SEMICOLON;
+
+terminal String IDENT;
+terminal String STRING;
+terminal Integer NUMBER;
+
+/* ---------- start ---------- */
+start with statements;
+
+/* ---------- grammar ---------- */
+
+statements ::=
+    statement statements
+        {:
+            List<Object> list = new ArrayList<>();
+            list.add($1);
+            list.addAll((List<Object>) $2);
+            RESULT = list;
+        :}
+  | statement
+        {:
+            List<Object> list = new ArrayList<>();
+            list.add($1);
+            RESULT = list;
+        :}
+  ;
+
+statement ::=
+      config   {: RESULT = $1; :}
+    | variable {: RESULT = $1; :}
+    | test     {: RESULT = $1; :}
+    ;
+
+/* Config block (simple single assignment for base_url) */
+config ::=
+    CONFIG BASE_URL EQUALS STRING SEMICOLON
+        {:
+            Config cfg = new Config();
+            cfg.setBaseUrl($4);
+            RESULT = cfg;
+        :}
+    ;
+
+/* Variable declaration: let name = value; */
+variable ::=
+    LET IDENT EQUALS value SEMICOLON
+        {:
+            RESULT = new Variable($2, $4);
+        :}
+    ;
+
+/* test block (for now a single request + single assertion) */
+test ::=
+    TEST IDENT LBRACE request assertion RBRACE
+        {:
+            TestCase t = new TestCase($2);
+            t.addRequest((Request)$4);
+            t.addAssertion((Assertion)$5);
+            RESULT = t;
+        :}
+    ;
+
+/* request: method "string" */
+request ::=
+    method STRING
+        {:
+            RESULT = new Request($1, $2);
+        :}
+    ;
+
+/* method tokens -> java string */
+method ::=
+      GET    {: RESULT = "GET"; :}
+    | POST   {: RESULT = "POST"; :}
+    | PUT    {: RESULT = "PUT"; :}
+    | DELETE {: RESULT = "DELETE"; :}
+    ;
+
+/* assertions */
+assertion ::=
+      EXPECT STATUS NUMBER SEMICOLON
+        {:
+            RESULT = Assertion.statusEquals(((Integer)$3).intValue());
+        :}
+    | EXPECT BODY CONTAINS STRING SEMICOLON
+        {:
+            RESULT = Assertion.bodyContains($4);
+        :}
+    ;
+
+/* value: string or number */
+value ::=
+      STRING {: RESULT = $1; :}
+    | NUMBER {: RESULT = $1; :}
+    ;

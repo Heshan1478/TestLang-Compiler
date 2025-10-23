@@ -16,6 +16,7 @@ A Domain-Specific Language (DSL) for HTTP API testing that compiles into executa
 - [Prerequisites](#prerequisites)
 - [Build Instructions](#build-instructions)
 - [Usage](#usage)
+- [Backend Setup (Optional)](#backend-setup-optional)
 - [Language Syntax](#language-syntax)
 - [Examples](#examples)
 - [Error Handling](#error-handling)
@@ -77,7 +78,12 @@ TestLangPP/
 ├── invalid2.test              # Example: semantic error (insufficient assertions)
 ├── invalid3.test              # Example: undefined variable reference
 ├── invalid4.test              # Example: type error (body not a string)
-└── README.md                  # This documentation file
+├── README.md                  # This documentation file
+└── TestLangBackend/           # Optional Spring Boot backend for testing
+    ├── pom.xml
+    └── src/main/java/com/testlang/
+        ├── TestLangBackendApp.java
+        └── ApiController.java
 ```
 
 ---
@@ -92,6 +98,10 @@ To build and run this compiler, you need:
 - JUnit Platform Console Standalone 1.9.3 (included in lib/)
 
 All required JAR files are included in the lib/ directory.
+
+For the optional backend:
+- Java 17 or higher
+- Maven (bundled with IntelliJ IDEA)
 
 ---
 
@@ -162,7 +172,177 @@ Execute the compiled tests using JUnit Platform Console:
 java -jar lib/junit-platform-console-standalone-1.9.3.jar --class-path src --select-class GeneratedTests
 ```
 
-Note: The tests will attempt to connect to the configured backend URL (default: http://localhost:8080). If no backend is running, tests will fail with connection errors or 404 responses. This is expected behavior and demonstrates that the generated code is functional.
+**Without Backend:** Tests will fail with connection errors or 404 responses. This demonstrates that the generated code is functional and correctly attempts HTTP requests.
+
+**With Backend Running:** Tests will successfully execute and pass, demonstrating a complete end-to-end API testing workflow.
+
+See [Backend Setup](#backend-setup-optional) for instructions on running the Spring Boot backend.
+
+---
+
+## Backend Setup 
+
+A simple Spring Boot backend is provided to demonstrate the generated tests against real API endpoints.
+
+### Backend Structure
+
+```
+TestLangBackend/
+├── pom.xml
+└── src/main/java/com/testlang/
+    ├── TestLangBackendApp.java
+    └── ApiController.java
+```
+
+### Starting the Backend
+
+**Option 1: Using IntelliJ IDEA**
+1. Open the `TestLangBackend` project in IntelliJ
+2. Right-click `TestLangBackendApp.java`
+3. Select "Run 'TestLangBackendApp.main()'"
+4. Backend will start on http://localhost:8080
+
+**Option 2: Using Maven Command Line**
+```bash
+cd TestLangBackend
+mvn spring-boot:run
+```
+
+The console will display:
+```
+Backend running at http://localhost:8080
+Available endpoints:
+   POST http://localhost:8080/api/login
+   GET  http://localhost:8080/api/users/42
+```
+
+### Available Endpoints
+
+The backend implements two REST endpoints that match the example.test specifications:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/login` | User authentication endpoint |
+| GET | `/api/users/{id}` | Retrieve user information |
+
+#### POST /api/login
+
+Validates user credentials and returns an authentication token.
+
+**Request:**
+```json
+{
+  "username": "admin",
+  "password": "1234"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "token": "abc123xyz789",
+  "success": true,
+  "username": "admin"
+}
+```
+
+**Response (401 Unauthorized) - Invalid credentials:**
+```json
+{
+  "error": "Invalid credentials"
+}
+```
+
+#### GET /api/users/{id}
+
+Retrieves user information by user ID.
+
+**Example:** `GET /api/users/42`
+
+**Response (200 OK):**
+```json
+{
+  "id": 42,
+  "name": "Chathura Perera",
+  "role": "USER",
+  "active": true
+}
+```
+
+### Testing with Postman
+
+You can test the backend endpoints using Postman:
+
+1. Download Postman from https://www.postman.com/downloads/
+2. Create a new request
+3. Test each endpoint:
+
+**Test POST /api/login:**
+- Method: POST
+- URL: `http://localhost:8080/api/login`
+- Headers: `Content-Type: application/json`
+- Body (raw JSON):
+  ```json
+  {
+    "username": "admin",
+    "password": "1234"
+  }
+  ```
+
+**Test GET /api/users/42:**
+- Method: GET
+- URL: `http://localhost:8080/api/users/42`
+
+### Running Tests Against Backend
+
+The backend must be started separately before running the generated tests.
+
+With the backend running, your generated tests will successfully make HTTP requests:
+
+```bash
+# 1. Generate tests from DSL
+java -cp "lib/java-cup-runtime-11b-20160615.jar;src" Main example.test
+
+# 2. Compile generated tests
+javac -cp "lib/junit-platform-console-standalone-1.9.3.jar;src" src/GeneratedTests.java
+
+# 3. Run tests (all should pass!)
+java -jar lib/junit-platform-console-standalone-1.9.3.jar --class-path src --select-class GeneratedTests
+```
+
+**Expected Output (Backend Running):**
+```
+Thanks for using JUnit! Support its development at https://junit.org/sponsoring
+
+Test run finished after 492 ms
+[         2 containers found      ]
+[         2 containers started    ]
+[         2 containers successful ]
+[         2 tests found           ]
+[         2 tests started         ]
+[         2 tests successful      ]
+[         0 tests failed          ]
+```
+
+**Backend Console Output:**
+```
+POST /api/login - username: admin
+GET /api/users/42
+```
+
+**Expected Output (Backend Not Running):**
+```
+Test run finished after 123 ms
+[         2 tests found           ]
+[         2 tests started         ]
+[         0 tests successful      ]
+[         2 tests failed          ]
+
+Failures:
+  Connection refused: localhost:8080
+```
+
+**Note:** If the backend is not running, tests will fail with connection errors. This is expected behavior and demonstrates that the generated code correctly attempts to connect to the configured endpoints.
 
 ---
 
@@ -310,7 +490,7 @@ test Login {
 test GetUser {
   GET "/api/users/$id";
   expect status = 200;
-  expect body contains "\"id\": 42";
+  expect body contains "\"id\":42";
 }
 ```
 
@@ -458,42 +638,11 @@ java -cp "lib/java-cup-runtime-11b-20160615.jar;src" Main invalid4.test
 
 Each should produce clear, helpful error messages without crashing.
 
----
-
-## Assignment Requirements
-
-This project fulfills all requirements specified in the SE2062 assignment:
-
-**Language Design Fidelity (25 marks):**
-- Implements all required constructs: config, variables, tests, requests, assertions
-- Handles edge cases with appropriate error messages
-- Well-documented syntax and semantics
-
-**Scanner & Parser Quality (30 marks):**
-- JFlex-based scanner with comprehensive token recognition
-- Java CUP parser with proper grammar rules
-- Meaningful error messages with line and column information
-- Graceful error recovery where possible
-
-**Code Generation (30 marks):**
-- Generates compilable, idiomatic JUnit 5 code
-- Uses Java 11+ HttpClient for HTTP requests
-- Proper variable substitution implementation
-- Clean code structure with reusable helper methods
-
-**Demo & Examples (15 marks):**
-- Working end-to-end pipeline from DSL to executable tests
-- Multiple examples demonstrating language features
-- Clear demonstration of error handling
-- Complete documentation
-
----
-
 ## Conclusion
 
-This compiler demonstrates a complete implementation of a domain-specific language for API testing. The project showcases lexical analysis, parsing, semantic validation, and code generation techniques learned in SE2052.
+This compiler demonstrates a complete implementation of a domain-specific language for API testing. The project showcases lexical analysis, parsing, semantic validation, and code generation techniques.
 
-
+The optional Spring Boot backend (TestLangBackend) provides a complete end-to-end demonstration, allowing the generated tests to execute against real HTTP endpoints and validate responses. The backend runs separately and implements the POST /api/login and GET /api/users/{id} endpoints used in the example tests.
 
 ---
 
