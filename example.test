@@ -8,11 +8,16 @@ let id = 42;
 
 test Login {
   POST "/api/login" {
-    body = "{ \"username\": \"$user\", \"password\": \"1234\" }";
+    body = """
+    {
+      "username": "$user",
+      "password": "1234"
+    }
+    """;
   };
-  expect status = 200;
+  expect status in 200..299;
   expect header "Content-Type" contains "json";
-  expect body contains "\"token\":";
+  expect body contains "token";
 }
 
 test GetUser {

@@ -56,7 +56,6 @@ parser code {:
     }
 
     // Helper to get token name
-    // Helper to get token name
     public String symbl_name_from_id(int id) {
         try {
             return sym.terminalNames[id];
@@ -72,7 +71,8 @@ terminal LET, TEST;
 terminal GET, POST, PUT, DELETE;
 terminal EXPECT, STATUS, BODY, CONTAINS;
 terminal LBRACE, RBRACE, EQUALS, SEMICOLON;
-terminal String IDENT, STRING;
+terminal IN, DOTDOT;
+terminal String IDENT, STRING, TRIPLE_STRING;
 terminal Integer NUMBER;
 
 /* ---------- Nonterminal types ---------- */
@@ -91,6 +91,7 @@ non terminal Object request_item;
 non terminal Assertion assertion;
 non terminal String method;
 non terminal Object value;
+non terminal String string_value;
 
 /* ---------- Start ---------- */
 start with program;
@@ -237,7 +238,7 @@ request_items ::=
 request_item ::=
     HEADER STRING:k EQUALS STRING:v SEMICOLON
         {: RESULT = new Request.HeaderEntry(false, k, v); :}
-  | BODY EQUALS STRING:b SEMICOLON
+  | BODY EQUALS string_value:b SEMICOLON
         {: RESULT = new Request.HeaderEntry(true, null, b); :}
   ;
 
@@ -251,12 +252,19 @@ method ::=
 assertion ::=
     EXPECT STATUS EQUALS NUMBER:n SEMICOLON
         {: RESULT = Assertion.statusEquals(n.intValue()); :}
+  | EXPECT STATUS IN NUMBER:start DOTDOT NUMBER:end SEMICOLON
+        {: RESULT = Assertion.statusInRange(start.intValue(), end.intValue()); :}
   | EXPECT HEADER STRING:k EQUALS STRING:v SEMICOLON
         {: RESULT = Assertion.headerEquals(k, v); :}
   | EXPECT HEADER STRING:k CONTAINS STRING:v SEMICOLON
         {: RESULT = Assertion.headerContains(k, v); :}
   | EXPECT BODY CONTAINS STRING:s SEMICOLON
         {: RESULT = Assertion.bodyContains(s); :}
+  ;
+
+string_value ::=
+      STRING:s        {: RESULT = s; :}
+    | TRIPLE_STRING:s {: RESULT = s; :}
   ;
 
 value ::=

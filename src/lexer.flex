@@ -1,6 +1,7 @@
 import java_cup.runtime.Symbol;
 
 %%
+
 %class Lexer
 %unicode
 %cup
@@ -35,20 +36,28 @@ import java_cup.runtime.Symbol;
 "status"                          { return symbol(sym.STATUS, null); }
 "body"                            { return symbol(sym.BODY, null); }
 "contains"                        { return symbol(sym.CONTAINS, null); }
+"in"                              { return symbol(sym.IN, null); }
 
 /* ---------- Symbols ---------- */
 "{"                               { return symbol(sym.LBRACE, null); }
 "}"                               { return symbol(sym.RBRACE, null); }
 "="                               { return symbol(sym.EQUALS, null); }
 ";"                               { return symbol(sym.SEMICOLON, null); }
+".."                              { return symbol(sym.DOTDOT, null); }
 
 /* ---------- Literals ---------- */
+// Triple-quoted string (multiline support)
+\"\"\"([^\"]|\"[^\"]|\"\"[^\"])*\"\"\"  {
+    String s = yytext().substring(3, yytext().length() - 3);
+    return symbol(sym.TRIPLE_STRING, s);
+}
+
 // Double-quoted string with escape support for \" and \\
 \"([^\"\\]|\\.)*\"                {
-                                     String s = yytext().substring(1, yytext().length() - 1);
-                                     s = s.replace("\\\"", "\"").replace("\\\\", "\\");
-                                     return symbol(sym.STRING, s);
-                                   }
+    String s = yytext().substring(1, yytext().length() - 1);
+    s = s.replace("\\\"", "\"").replace("\\\\", "\\");
+    return symbol(sym.STRING, s);
+}
 
 // Numbers (only non-negative integers)
 [0-9]+                            { return symbol(sym.NUMBER, Integer.parseInt(yytext())); }
@@ -61,8 +70,7 @@ import java_cup.runtime.Symbol;
 
 /* ---------- Error handling ---------- */
 .                                 {
-                                     System.err.println("Lexical error at line " + (yyline + 1) +
-                                       ", column " + (yycolumn + 1) +
-                                       ": Unexpected character '" + yytext() + "'");
-                                     // Continue scanning instead of stopping
-                                  }
+    System.err.println("Lexical error at line " + (yyline + 1) +
+      ", column " + (yycolumn + 1) +
+      ": Unexpected character '" + yytext() + "'");
+}

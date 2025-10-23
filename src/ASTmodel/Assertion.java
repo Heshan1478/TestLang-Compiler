@@ -1,17 +1,19 @@
 package ASTmodel;
 
-// ========== Assertion.java ==========
 public class Assertion {
     public enum Type {
         STATUS_EQUALS,
+        STATUS_IN_RANGE,
         HEADER_EQUALS,
         HEADER_CONTAINS,
         BODY_CONTAINS
     }
 
     private Type type;
-    private String key;      // for header assertions
-    private String expected; // String value or status code as string
+    private String key;
+    private String expected;
+    private int rangeStart;
+    private int rangeEnd;
 
     private Assertion(Type type, String key, String expected) {
         this.type = type;
@@ -19,8 +21,18 @@ public class Assertion {
         this.expected = expected;
     }
 
+    private Assertion(Type type, int rangeStart, int rangeEnd) {
+        this.type = type;
+        this.rangeStart = rangeStart;
+        this.rangeEnd = rangeEnd;
+    }
+
     public static Assertion statusEquals(int status) {
         return new Assertion(Type.STATUS_EQUALS, null, String.valueOf(status));
+    }
+
+    public static Assertion statusInRange(int start, int end) {
+        return new Assertion(Type.STATUS_IN_RANGE, start, end);
     }
 
     public static Assertion headerEquals(String headerName, String value) {
@@ -49,5 +61,13 @@ public class Assertion {
 
     public int getExpectedStatus() {
         return Integer.parseInt(expected);
+    }
+
+    public int getRangeStart() {
+        return rangeStart;
+    }
+
+    public int getRangeEnd() {
+        return rangeEnd;
     }
 }

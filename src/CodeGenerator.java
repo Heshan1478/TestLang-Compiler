@@ -134,6 +134,19 @@ public class CodeGenerator {
                         .append(", resp.statusCode());\n");
                 break;
 
+            case STATUS_IN_RANGE:
+                sb.append("        int status = resp.statusCode();\n");
+                sb.append("        assertTrue(status >= ")
+                        .append(assertion.getRangeStart())
+                        .append(" && status <= ")
+                        .append(assertion.getRangeEnd())
+                        .append(", \"Expected status in range ")
+                        .append(assertion.getRangeStart())
+                        .append("..")
+                        .append(assertion.getRangeEnd())
+                        .append(" but got \" + status);\n");
+                break;
+
             case HEADER_EQUALS:
                 sb.append("        assertEquals(\"")
                         .append(escapeJava(assertion.getExpected()))
