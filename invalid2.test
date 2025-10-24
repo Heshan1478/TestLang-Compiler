@@ -1,9 +1,10 @@
-//Invalid identifier - will be caught by lexer
+// Status code must be an integer, not a string
 config {
   base_url = "http://localhost:8080";
 }
 
-test NotEnoughAssertions {
+test StatusAsString {
   GET "/api/test";
-  expect status = 200;
+  expect status = "200";
+  expect body contains "ok";
 }

@@ -1,12 +1,12 @@
-//Body not a string - parser will catch
+// Identifier cannot start with a digit
 config {
   base_url = "http://localhost:8080";
 }
 
-test BodyNotString {
-  POST "/api/test" {
-    body = 123;
-  };
+let 2user = "admin";
+
+test TestIdentifier {
+  GET "/api/test";
   expect status = 200;
   expect body contains "ok";
 }

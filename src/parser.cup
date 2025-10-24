@@ -252,6 +252,22 @@ method ::=
 assertion ::=
     EXPECT STATUS EQUALS NUMBER:n SEMICOLON
         {: RESULT = Assertion.statusEquals(n.intValue()); :}
+  | EXPECT STATUS EQUALS STRING:s SEMICOLON
+        {:
+           System.err.println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+           System.err.println("SEMANTIC ERROR:");
+           System.err.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+           System.err.println("Location: Status assertion");
+           System.err.println("Error: Status code must be an integer, not a string");
+           System.err.println("\nFound: \"" + s + "\"");
+           System.err.println("Expected: " + s + " (without quotes)");
+           System.err.println("\nCorrect usage:");
+           System.err.println("  expect status = 200;      // Correct");
+           System.err.println("  expect status = \"200\";    // Wrong!");
+           System.err.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+           System.exit(1);
+           RESULT = Assertion.statusEquals(200);
+        :}
   | EXPECT STATUS IN NUMBER:start DOTDOT NUMBER:end SEMICOLON
         {: RESULT = Assertion.statusInRange(start.intValue(), end.intValue()); :}
   | EXPECT HEADER STRING:k EQUALS STRING:v SEMICOLON

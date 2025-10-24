@@ -62,6 +62,20 @@ import java_cup.runtime.Symbol;
 // Numbers (only non-negative integers)
 [0-9]+                            { return symbol(sym.NUMBER, Integer.parseInt(yytext())); }
 
+// Catch invalid identifiers starting with digit (BEFORE valid identifiers)
+[0-9]+[A-Za-z_][A-Za-z0-9_]*      {
+    System.err.println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    System.err.println("LEXICAL ERROR:");
+    System.err.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    System.err.println("Location: Line " + (yyline + 1) + ", Column " + (yycolumn + 1));
+    System.err.println("Invalid identifier: '" + yytext() + "'");
+    System.err.println("\nError: Identifier cannot start with a digit");
+    System.err.println("Hint: Variable names must start with a letter or underscore");
+    System.err.println("      Valid examples: a2, user1, _temp");
+    System.err.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    System.exit(1);
+}
+
 // Identifiers (variable/test names)
 [A-Za-z_][A-Za-z0-9_]*            { return symbol(sym.IDENT, yytext()); }
 

@@ -1,4 +1,4 @@
-// Missing semicolon
+// Missing semicolon after GET request
 config {
   base_url = "http://localhost:8080";
 }
