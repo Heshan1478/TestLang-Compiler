@@ -21,7 +21,6 @@ A Domain-Specific Language (DSL) for HTTP API testing that compiles into executa
 - [Examples](#examples)
 - [Error Handling](#error-handling)
 - [Testing the Compiler](#testing-the-compiler)
-- [Assignment Requirements](#assignment-requirements)
 
 ---
 
@@ -43,6 +42,8 @@ This compiler supports the following features:
 - Variable substitution in request paths and bodies
 - Request-specific headers and JSON body payloads
 - Multiple assertion types: status codes, header validation, body content checking
+- **Triple-quoted multiline strings** for cleaner JSON bodies (bonus feature)
+- **Range-based status assertions** for flexible status code checking (bonus feature)
 - Comprehensive error detection with helpful error messages
 - Clean code generation producing idiomatic JUnit 5 tests
 
@@ -75,9 +76,9 @@ TestLangPP/
 │   └── junit-platform-console-standalone-1.9.3.jar
 ├── example.test               # Valid test file demonstrating features
 ├── invalid1.test              # Example: syntax error (missing semicolon)
-├── invalid2.test              # Example: semantic error (insufficient assertions)
+├── invalid2.test              # Example: type error (status must be integer)
 ├── invalid3.test              # Example: undefined variable reference
-├── invalid4.test              # Example: type error (body not a string)
+├── invalid4.test              # Example: lexical error (identifier starts with digit)
 ├── README.md                  # This documentation file
 └── TestLangBackend/           # Optional Spring Boot backend for testing
     ├── pom.xml
@@ -180,7 +181,7 @@ See [Backend Setup](#backend-setup-optional) for instructions on running the Spr
 
 ---
 
-## Backend Setup 
+## Backend Setup (Optional)
 
 A simple Spring Boot backend is provided to demonstrate the generated tests against real API endpoints.
 
@@ -416,6 +417,31 @@ PUT "/api/users/42" {
 
 Note: The semicolon after the closing brace is required.
 
+### Triple-Quoted Multiline Strings (Bonus Feature)
+
+For cleaner, more readable JSON bodies, you can use triple-quoted strings that span multiple lines without escaping quotes:
+
+**Traditional syntax (still supported):**
+```
+body = "{ \"username\": \"admin\", \"password\": \"1234\" }";
+```
+
+**Multiline syntax (bonus feature):**
+```
+body = """
+{
+  "username": "admin",
+  "password": "1234"
+}
+""";
+```
+
+Benefits:
+- No need to escape double quotes
+- Natural JSON formatting
+- Improved readability
+- Variable substitution still works: `"username": "$user"`
+
 ### Assertions
 
 Each test must include at least two assertions. Supported assertion types:
@@ -423,6 +449,12 @@ Each test must include at least two assertions. Supported assertion types:
 **Status code equality:**
 ```
 expect status = 200;
+```
+
+**Status code range (bonus feature):**
+```
+expect status in 200..299;    // Any 2xx success code
+expect status in 400..499;    // Any 4xx client error
 ```
 
 **Header exact match:**
@@ -453,9 +485,14 @@ test Example {
   expect status = 200;
   
   POST "/api/login" {
-    body = "{ \"username\": \"$username\" }";
+    body = """
+    {
+      "username": "$username",
+      "password": "1234"
+    }
+    """;
   };
-  expect status = 200;
+  expect status in 200..299;
 }
 ```
 
@@ -467,7 +504,7 @@ At code generation time, variable references are replaced with their declared va
 
 ### Complete Working Example
 
-Here is a complete example demonstrating all language features (example.test):
+Here is a complete example demonstrating all language features including bonus features (example.test):
 
 ```
 config {
@@ -480,11 +517,16 @@ let id = 42;
 
 test Login {
   POST "/api/login" {
-    body = "{ \"username\": \"$user\", \"password\": \"1234\" }";
+    body = """
+    {
+      "username": "$user",
+      "password": "1234"
+    }
+    """;
   };
-  expect status = 200;
+  expect status in 200..299;
   expect header "Content-Type" contains "json";
-  expect body contains "\"token\":";
+  expect body contains "token";
 }
 
 test GetUser {
@@ -497,21 +539,57 @@ test GetUser {
 This example shows:
 - Configuration with base URL and default header
 - Variable declarations (string and integer)
-- POST request with body and variable substitution
+- POST request with **multiline body** (bonus feature) and variable substitution
 - GET request with variable in path
-- Multiple assertion types (status, header contains, body contains)
+- Multiple assertion types including **range-based status check** (bonus feature)
+- Traditional status equality assertion
 
 ---
 
 ## Error Handling
 
-The compiler provides detailed error messages for both syntax and semantic errors.
+The compiler provides detailed error messages for both syntax and semantic errors across all phases: lexical analysis, parsing, and semantic validation.
+
+### Lexical Errors
+
+Lexical errors occur during token recognition when invalid character sequences are encountered.
+
+**Example: Identifier starting with a digit**
+
+Input (invalid4.test):
+```
+config {
+  base_url = "http://localhost:8080";
+}
+
+let 2user = "admin";
+
+test TestIdentifier {
+  GET "/api/test";
+  expect status = 200;
+  expect body contains "ok";
+}
+```
+
+Error output:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+LEXICAL ERROR:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Location: Line 6, Column 5
+Invalid identifier: '2user'
+
+Error: Identifier cannot start with a digit
+Hint: Variable names must start with a letter or underscore
+      Valid examples: a2, user1, _temp
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
 
 ### Syntax Errors
 
 Syntax errors occur when the input does not conform to the grammar. The parser reports the location and provides helpful hints.
 
-**Example: Missing semicolon after GET request**
+**Example 1: Missing semicolon after GET request**
 
 Input (invalid1.test):
 ```
@@ -528,17 +606,17 @@ test MissingSemicolon {
 
 Error output:
 ```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SYNTAX ERROR:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Location: Line 8, Column 3
 Unexpected token: EXPECT
+
 Hint: Did you forget a semicolon after the previous statement?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-### Semantic Errors
-
-Semantic errors occur when the code is syntactically correct but violates language rules.
-
-**Example 1: Insufficient assertions**
+**Example 2: Status must be integer, not string**
 
 Input (invalid2.test):
 ```
@@ -546,19 +624,35 @@ config {
   base_url = "http://localhost:8080";
 }
 
-test NotEnoughAssertions {
+test StatusAsString {
   GET "/api/test";
-  expect status = 200;
+  expect status = "200";
+  expect body contains "ok";
 }
 ```
 
 Error output:
 ```
-SEMANTIC ERRORS:
-Test 'NotEnoughAssertions': Must have at least 2 assertions (found 1)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SEMANTIC ERROR:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Location: Status assertion
+Error: Status code must be an integer, not a string
+
+Found: "200"
+Expected: 200 (without quotes)
+
+Correct usage:
+  expect status = 200;      // Correct
+  expect status = "200";    // Wrong!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-**Example 2: Undefined variable reference**
+### Semantic Errors
+
+Semantic errors occur when the code is syntactically correct but violates language rules.
+
+**Example: Undefined variable reference**
 
 Input (invalid3.test):
 ```
@@ -577,33 +671,11 @@ test UndefinedVariable {
 
 Error output:
 ```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SEMANTIC ERRORS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Test 'UndefinedVariable', path: Undefined variable '$id'
-```
-
-**Example 3: Type error in body**
-
-Input (invalid4.test):
-```
-config {
-  base_url = "http://localhost:8080";
-}
-
-test BodyNotString {
-  POST "/api/test" {
-    body = 123;
-  };
-  expect status = 200;
-  expect body contains "ok";
-}
-```
-
-Error output:
-```
-SYNTAX ERROR:
-Location: Line 8, Column 12
-Unexpected token: NUMBER
-Hint: Check if you need quotes around this value.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ---
@@ -618,7 +690,7 @@ To verify the compiler works correctly, test it with both valid and invalid inpu
 java -cp "lib/java-cup-runtime-11b-20160615.jar;src" Main example.test
 ```
 
-Expected: Successful parsing, validation, and code generation.
+Expected: Successful parsing, validation, and code generation with bonus features (multiline strings, range assertions).
 
 ### Test Invalid Inputs
 
@@ -626,21 +698,27 @@ Expected: Successful parsing, validation, and code generation.
 # Syntax error - missing semicolon
 java -cp "lib/java-cup-runtime-11b-20160615.jar;src" Main invalid1.test
 
-# Semantic error - not enough assertions
+# Type error - status must be integer
 java -cp "lib/java-cup-runtime-11b-20160615.jar;src" Main invalid2.test
 
 # Semantic error - undefined variable
 java -cp "lib/java-cup-runtime-11b-20160615.jar;src" Main invalid3.test
 
-# Type error - body must be string
+# Lexical error - identifier starts with digit
 java -cp "lib/java-cup-runtime-11b-20160615.jar;src" Main invalid4.test
 ```
 
-Each should produce clear, helpful error messages without crashing.
+Each should produce clear, helpful error messages without crashing, demonstrating comprehensive error handling across all compiler phases.
+
+---
 
 ## Conclusion
 
 This compiler demonstrates a complete implementation of a domain-specific language for API testing. The project showcases lexical analysis, parsing, semantic validation, and code generation techniques.
+
+**Bonus features implemented:**
+- Triple-quoted multiline strings for cleaner JSON body definitions
+- Range-based status code assertions for flexible HTTP response validation
 
 The optional Spring Boot backend (TestLangBackend) provides a complete end-to-end demonstration, allowing the generated tests to execute against real HTTP endpoints and validate responses. The backend runs separately and implements the POST /api/login and GET /api/users/{id} endpoints used in the example tests.
 

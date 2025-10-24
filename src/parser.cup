@@ -1,7 +1,3 @@
-/* ===========================================================
-   TestLang++ Parser - CUP 0.11b Compatible (Stack-based)
-   =========================================================== */
-
 import java_cup.runtime.*;
 import java.util.*;
 import ASTmodel.*;
@@ -17,9 +13,9 @@ parser code {:
         int line = cur_token.left;
         int column = cur_token.right;
 
-        System.err.println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        System.err.println("\n----------------------");
         System.err.println("SYNTAX ERROR:");
-        System.err.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        System.err.println("--------------------------");
 
         if (line >= 0 && column >= 0) {
             System.err.println("Location: Line " + line + ", Column " + column);
@@ -40,7 +36,7 @@ parser code {:
             System.err.println("\nHint: Check if you need quotes around this value.");
         }
 
-        System.err.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+        System.err.println("------------------------------\n");
     }
 
     // Custom error reporting
@@ -113,12 +109,12 @@ program ::=
   ;
 
 program_item ::=
-      config:c   {: RESULT = c; :}
-    | variable:v {: RESULT = v; :}
-    | test:t     {: RESULT = t; :}
+      config:c   {: RESULT = c; :}              // Configuration block
+    | variable:v {: RESULT = v; :}              // Variable declaration
+    | test:t     {: RESULT = t; :}              // Test case
   ;
 
-config ::=
+config ::=                                           // Creates a Config object containing base URL and default headers
     CONFIG LBRACE config_items:items RBRACE
         {:
            Config cfg = new Config();
@@ -134,7 +130,7 @@ config ::=
         :}
   ;
 
-config_items ::=
+config_items ::=                                // Builds a list of configuration entries
     config_item:i config_items:l
         {:
            List result = new ArrayList();
@@ -162,7 +158,7 @@ variable ::=
         {: RESULT = new Variable(n, v); :}
   ;
 
-test ::=
+test ::=                                       // Builds a TestCase object with all requests and assertions
     TEST IDENT:n LBRACE test_body:b RBRACE
         {:
            TestCase t = new TestCase(n);
@@ -177,7 +173,7 @@ test ::=
         :}
   ;
 
-test_body ::=
+test_body ::=                                    // Order matters - statements execute sequentially
     test_statement:s test_body:l
         {:
            List result = new ArrayList();
@@ -198,8 +194,8 @@ test_statement ::=
     | assertion:a {: RESULT = a; :}
   ;
 
-request ::=
-    method:m STRING:p SEMICOLON
+request ::=                                  // HTTP request: METHOD "path"; or METHOD "path" { headers/body };
+    method:m STRING:p SEMICOLON              // Creates Request object with method, path, and optional body/headers
         {:
            Request req = new Request(m, p);
            RESULT = req;
@@ -242,7 +238,7 @@ request_item ::=
         {: RESULT = new Request.HeaderEntry(true, null, b); :}
   ;
 
-method ::=
+method ::=                                    // HTTP methods supported by the DSL
       GET    {: RESULT = "GET"; :}
     | POST   {: RESULT = "POST"; :}
     | PUT    {: RESULT = "PUT"; :}
@@ -251,12 +247,12 @@ method ::=
 
 assertion ::=
     EXPECT STATUS EQUALS NUMBER:n SEMICOLON
-        {: RESULT = Assertion.statusEquals(n.intValue()); :}
+        {: RESULT = Assertion.statusEquals(n.intValue()); :}                // Error case: status given as string instead of number
   | EXPECT STATUS EQUALS STRING:s SEMICOLON
         {:
-           System.err.println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+           System.err.println("\n------------------------------");
            System.err.println("SEMANTIC ERROR:");
-           System.err.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+           System.err.println("---------------------------------");
            System.err.println("Location: Status assertion");
            System.err.println("Error: Status code must be an integer, not a string");
            System.err.println("\nFound: \"" + s + "\"");
@@ -264,11 +260,11 @@ assertion ::=
            System.err.println("\nCorrect usage:");
            System.err.println("  expect status = 200;      // Correct");
            System.err.println("  expect status = \"200\";    // Wrong!");
-           System.err.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+           System.err.println("------------------------------\n");
            System.exit(1);
            RESULT = Assertion.statusEquals(200);
         :}
-  | EXPECT STATUS IN NUMBER:start DOTDOT NUMBER:end SEMICOLON
+  | EXPECT STATUS IN NUMBER:start DOTDOT NUMBER:end SEMICOLON                      // New feature: status in range (e.g., 200..299)
         {: RESULT = Assertion.statusInRange(start.intValue(), end.intValue()); :}
   | EXPECT HEADER STRING:k EQUALS STRING:v SEMICOLON
         {: RESULT = Assertion.headerEquals(k, v); :}

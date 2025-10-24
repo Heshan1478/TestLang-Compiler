@@ -14,13 +14,12 @@ public class SemanticChecker {
 
         // Print all errors
         if (!errors.isEmpty()) {
-            System.err.println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
             System.err.println("SEMANTIC ERRORS:");
-            System.err.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
             for (String error : errors) {
                 System.err.println("✗ " + error);
             }
-            System.err.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+
             return false;
         }
 

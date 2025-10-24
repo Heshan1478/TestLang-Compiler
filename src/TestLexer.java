@@ -13,7 +13,7 @@ public class TestLexer {
             Lexer lexer = new Lexer(reader);
 
             System.out.println("Testing Lexer on: " + args[0]);
-            System.out.println("═══════════════════════════════════════\n");
+            System.out.println("---------------------------\n");
 
             Symbol token;
             int count = 0;
@@ -44,7 +44,7 @@ public class TestLexer {
                 }
             }
 
-            System.out.println("\n═══════════════════════════════════════");
+            System.out.println("\n--------------------------------------");
             System.out.println("Total tokens: " + count);
 
         } catch (FileNotFoundException e) {

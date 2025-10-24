@@ -86,13 +86,13 @@ public class Main {
             }
 
             // Summary
-            System.out.println("═══════════════════════════════════════");
+            System.out.println("-----------------------------");
             System.out.println("PARSING SUMMARY:");
-            System.out.println("═══════════════════════════════════════");
+            System.out.println("------------------------------");
             System.out.println("Config:    " + (config != null ? "✓ Present" : "✗ Not found"));
             System.out.println("Variables: " + variables.size());
             System.out.println("Tests:     " + testCases.size());
-            System.out.println("═══════════════════════════════════════\n");
+            System.out.println("--------------------------------\n");
 
             // Semantic validation
             System.out.println("Validating...");
@@ -108,9 +108,9 @@ public class Main {
 
             // Generate JUnit tests if we have test cases
             if (!testCases.isEmpty()) {
-                System.out.println("═══════════════════════════════════════");
+                System.out.println("-------------------------------");
                 System.out.println("GENERATING JUNIT TESTS:");
-                System.out.println("═══════════════════════════════════════\n");
+                System.out.println("--------------------------------\n");
 
                 CodeGenerator generator = new CodeGenerator(config, variables, testCases);
                 String generatedCode = generator.generate();
@@ -139,9 +139,9 @@ public class Main {
 
         } catch (Exception e) {
             System.err.println("\n✗ ERROR during parsing:");
-            System.err.println("─────────────────────────────────────");
+            System.err.println("----------------------------------");
             e.printStackTrace();
-            System.err.println("─────────────────────────────────────");
+            System.err.println("----------------------------------");
             System.exit(1);
         }
     }
