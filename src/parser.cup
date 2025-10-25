@@ -33,7 +33,7 @@ parser code {:
         } else if (tokenName.equals("RBRACE")) {
             System.err.println("\nHint: Check if you're missing a semicolon after a request block.");
         } else if (tokenName.equals("NUMBER") || tokenName.equals("IDENT")) {
-            System.err.println("\nHint: Check if you need quotes around this value.");
+            System.err.println("\nError: expected STRING after 'body ='.");
         }
 
         System.err.println("------------------------------\n");
